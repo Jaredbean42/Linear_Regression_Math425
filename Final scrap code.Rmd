@@ -1,0 +1,367 @@
+---
+title: "Final Scrap Code"
+author: "Jared Bean"
+date: "2025-04-10"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+```{r}
+library(MASS) # for robust regressions
+library(carData)
+library(mosaic)
+library(car)
+```
+
+
+# 1 
+```{r}
+mycat <- lm(Hwt~Bwt, data=cats)
+
+summary(mycat)
+
+```
+
+# 3
+```{r}
+
+myrand <- lm(ccf~thermsPerDay, data=Utilities)
+summary(myrand)
+
+
+plot(ccf ~ thermsPerDay, data=Utilities)
+
+# Set up a layout for multiple plots
+par(mfrow = c(1, 3))
+
+# Plot residuals vs fitted and QQ plot
+plot(myrand, which = 1) # Residuals vs Fitted
+qqPlot(myrand, main = "QQ Plot") # Enhanced QQ Plot with car package
+
+# Plot residuals vs order
+plot(myrand$residuals, main = "Residuals vs Order",
+     xlab = "Observation Order", ylab = "Residuals")
+
+```
+
+
+# 4 Use the Utilities data set to perform a regression that shows how kilowatt hours are impacted by the year and average temperature as well as their interaction.
+
+How much is the kilowatt hours predicted to change each year by this regression model if the average temperature of the billing period is 60 degrees?
+
+```{r}
+
+myelec <- lm(kwh~year + temp + year:temp, data=Utilities)
+
+pred_val1 <- predict(myelec, data.frame(temp=60, year=2005), interval = "predict")
+pred_val2 <- predict(myelec, data.frame(temp=60, year=2004), interval = "predict")
+
+pred_val1#find the differences between multiple years
+pred_val2
+```
+
+
+# 5 perform a regression of temp on ccf.
+
+Identify and perform the "best" Y-transformation for this data.
+
+Which of the following correctly adds the transformation equation back onto the original scatterplot of temp and ccf?
+
+```{r}
+mytemp <- lm(temp~ccf, data=Utilities)
+boxCox(mytemp)
+
+
+mytrans.lm <- lm(sqrt(temp)~ccf, data=Utilities)
+summary(mytrans.lm)
+
+
+plot(temp~ccf, data=Utilities)
+curve((8.523 - 0.021*x)^2, add=TRUE, col="skyblue")#square it to get it back
+
+```
+
+
+# 6 Use the Utilities data set to fit a loess (degree=2, span=0.3) curve to the plot that predicts the "totalbill" based on the month of the year.
+
+Use your loess curve to predict the total bill for September.
+
+
+```{r}
+?loess
+plot(totalbill~month, data=Utilities)
+lines(loess(totalbill~ month, data=Utilities, degree = 2, span=0.3), col="firebrick")
+#month 9 is sep
+
+#look at example in ? loess #GOT IT!!! WOOO
+
+bill.lo <- loess(totalbill~ month, Utilities, degree = 2, span=0.3)
+predict(bill.lo, data.frame(month=9), se=TRUE)
+
+```
+
+
+
+# 7 loess curve of ozone???
+
+```{r}
+testlm <- lm(Temp~Ozone, data=airquality)
+plot(Temp~Ozone, data=airquality)
+loess(testlm)
+```
+
+
+
+# 8 Add a regression line to this plot. Then, provide an interval that estimates what this month's Total Bill will be when it is known that this month's Gas Bill is $150.
+
+```{r}
+lmgas <- lm(totalbill ~ gasbill, data=Utilities)
+
+plot(totalbill ~ gasbill, data=Utilities)
+abline(lmgas)
+
+pred_gas <- predict(lmgas, data.frame(gasbill=150), interval = "predict")
+pred_gas
+```
+
+
+
+# 9 In 2013 ccf = $1.32. The Utilities data set from library(mosaic) in R allows us to perform a regression that could be used to determine if the average cost of a ccf was different for (this particular residence) during the years 1999 to 2010. (Hint: gasbill ~ ccf.)
+
+Perform this regression. Report the slope of the regression.
+
+```{r}
+myccf <- lm(gasbill~ccf, data=Utilities)
+summary(myccf)
+
+```
+
+# 10 Create a pairs plot for the airquality data set in R.
+
+Which graph shows the highest R-squared value for a simple linear regression?
+
+```{r}
+pairs(airquality, pch=16, cex=1, panel=panel.smooth, col=rgb(.8,.8,.8))
+
+lm1 <- lm(Ozone~Wind, data=airquality)#beat by oz temp
+summary(lm1)
+
+lm1 <- lm(Solar.R~Wind, data=airquality)#NOT THIS ONE
+summary(lm1)
+
+lm1 <- lm(Ozone~Temp, data=airquality)#best
+summary(lm1)
+
+lm1 <- lm(Wind~Temp, data=airquality)
+summary(lm1)
+```
+
+
+# 11 Create a pairs plot of the Utilities data set from library(mosaic).
+
+Perform a simple linear regression of totalbill ~ gasbill. Use this regression to identify which variable should be added next to the regression.
+
+```{r}
+
+
+pairs(Utilities, pch=16, cex=1, panel=panel.smooth, col=rgb(.8,.8,.8))
+
+
+mygb <- lm(totalbill~gasbill, data=Utilities)
+
+```
+
+
+# 12 Use the Utilities data set to perform a regression that predicts the electric bill from the kilowatt hours of electricity usage.
+
+Test the hypotheses that the true regression slope is $0.11. In other words, test to see if the kilowatt hours cost 11 cents per hour or not.
+
+B1 = 0.11
+Report the p-value of your test.
+
+```{r}
+
+myp.lm <- lm(elecbill~kwh, data=Utilities)
+summary(myp.lm)
+t <-((0.108754-0.11)/0.005816) 
+pval<- pt(-abs(t),115)*2
+pval
+
+```
+
+
+
+# 13
+
+```{r}
+testlm <- lm(kwh~ccf, data=Utilities)
+summary(testlm)
+confint(testlm, level = 0.95) # need to make sure 95% and for true regression
+```
+
+
+# 14 How much does a cubic foot of natural gas (ccf) cost according to this model?
+
+```{r}
+mybl <- lm(totalbill~kwh+ccf+year,data=Utilities )
+
+summary(mybl)
+```
+
+
+# 15 trans
+
+```{r}
+mybar <- lm(gasbill~thermsPerDay, data=Utilities)
+
+plot(gasbill~thermsPerDay, data=Utilities)
+
+boxcox(mybar)
+
+mybar.t <- lm(sqrt(gasbill)~thermsPerDay, data=Utilities)
+summary(mybar.t)
+
+plot(gasbill~thermsPerDay, data=Utilities)
+b <- coef(mybar.t)
+curve((b[1] + b[2]*x)^2, add=TRUE, col="green", lwd=2)
+```
+
+
+
+# 16 Use the Utilities data set from library(mosaic) to create a plot of a quadratic regression showing the average billing period temperature on month of the year.
+
+Select the graph from the options below that matches your plot.
+
+
+```{r}
+myquad.lm <- lm(temp~month + I(month^2), data=Utilities)
+
+plot(temp~month, data=Utilities)
+b <- coef(myquad.lm)
+curve(b[1] + b[2]*x + b[3]*x^2, add=TRUE)
+
+```
+
+
+
+
+# 17 Use the Utilities data set from library(mosaic) to create a plot of a cubic regression showing the average billing period temperature on month of the year.
+
+Select the graph from the options below that matches your plot.
+
+
+```{r}
+myquad.lm <- lm(temp~month + I(month^2) + I(month^3), data=Utilities)
+
+plot(temp~month, data=Utilities)
+b <- coef(myquad.lm)
+ curve(b[1] + b[2]*x + b[3]*x^2 + b[4]*x^3, add=TRUE)
+```
+
+
+# 18 Open the Prestige data in R from library(car) and run the following code:
+
+#> Prestige2 <- mutate(Prestige, type = as.factor(ifelse(type == "prof", "prof","other")))
+
+Consider the regression model that is shown in the graph below for this data.
+
+Run an appropriate analysis in R that tests to see if the slope of the two lines shown in the graph below differ significantly.
+
+Report the p-value of the test. 
+
+```{r}
+Prestige2 <- mutate(Prestige, type = as.factor(ifelse(type == "prof", "prof","other")))
+
+richlm <- lm(income~prestige + prestige*type, data=Prestige2)
+
+summary(richlm)
+#0.00497 ** THERE IT IS WOOO!
+
+plot(income~prestige, xlim=c(0,80), ylm=c(0,20000), data=Prestige2)
+
+b <- coef(richlm)
+  x2 = 0
+  curve(b[1] + b[2]*x + b[3]*x2 + b[4]*x*x2, add=TRUE)
+  x2 = 1
+  curve(b[1] + b[2]*x + b[3]*x2 + b[4]*x*x2, add=TRUE, col="red")
+  
+  
+```
+
+
+
+# 20 Suppose a researcher performs a linear regression in R using the Chile data set from library(car). Their analysis reports "The population size of a person's community in which they live is a significant predictor (p-value < 2e-16) of the monthly income (in pesos) of an individual living in Chile." They further report the following, but don't show a graphic or any diagnostic plots for their test.
+
+
+
+```{r}
+chill <- na.omit(Chile)
+inclm <- lm(income~population, data=Chile)
+summary(inclm)
+
+plot(income~population, data=Chile)
+
+# Set up a layout for multiple plots
+par(mfrow = c(1, 3))
+
+# Plot residuals vs fitted and QQ plot
+plot(inclm, which = 1) # Residuals vs Fitted
+qqPlot(inclm, main = "QQ Plot") # Enhanced QQ Plot with car package
+
+# Plot residuals vs order
+plot(inclm$residuals, main = "Residuals vs Order",
+     xlab = "Observation Order", ylab = "Residuals")
+```
+
+
+# 21
+
+```{r}
+carlm <- lm(dist ~ speed, data=cars)
+summary(carlm)
+
+plot(dist ~ speed, data=cars)
+abline(carlm)
+points(13, 26, pch = 19, col = "blue", cex = 1.5)
+points(13, 12, pch = 19, col = "red", cex = 1.5)
+
+#it gets further increasing it
+```
+
+
+# 25 Use the mtcars data set in R to fit the regression model below to data that would provide a prediction interval for the gas mileage of a vehicle weighing in at 2050 pounds.
+
+```{r}
+ga.lm <- lm(log(mpg)~wt,data=mtcars)
+pred_mpg <- predict(ga.lm, data.frame(wt=2.05), interval = "predict")
+
+plot(mpg~wt, ylim=c(0,40),data=mtcars)
+b <- coef(ga.lm)
+curve(exp(b[1] + b[2]*x), add=TRUE, col="firebrick", lwd=2)
+lines(c(2.05, 2.05), c(exp(pred_mpg[2]), exp(pred_mpg[3])), col="firebrick", lwd=2, add=TRUE)
+#Sneaky...
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

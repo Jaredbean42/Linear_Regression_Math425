@@ -1,0 +1,287 @@
+---
+title: "Final Study Guide"
+author: "Jared Bean"
+date: "2025-04-09"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r}
+library(MASS) # for robust regressions
+library(carData)
+library(mosaic)
+library(car)
+```
+
+
+
+## Model Validation
+
+Question 2 on skills quiz
+    
+    Suppose a researcher from the 1920's was studying how far it took vehicles to stop (in feet)     based on the speed they were traveling (in mph) when the brakes were applied.
+    Suppose further that they came up with the following regression model from their study.
+    Yhat=-17+4.2xi
+    Use the "cars" data set in R to validate this regression model. What is the value of the         validation R-squared for this model? (Hint: Yhat <- -17...)
+
+answer:
+```{r}
+# Load data
+data(cars)
+
+# Assign variables
+X <- cars$speed
+Y <- cars$dist
+
+# Compute Yhat using the model: Yhat = -17 + 4.2 * X
+Yhat <- -17 + 4.2 * X
+
+# Compute SSTO (total sum of squares)
+ybar <- mean(Y)
+SSTO <- sum((Y - ybar)^2)
+
+# Compute SSE (sum of squared errors)
+SSE <- sum((Y - Yhat)^2)
+
+# Compute validation R-squared
+R2 <- 1 - SSE / SSTO
+R2
+
+```
+
+
+
+## The Lowess Curve
+Robust locally weighted regression and smoothing scatterplots (LOWESS), is an effective way to visually model the average y-value.
+
+```{r}
+
+plot(dist~speed, data=cars)
+lines(lowess(cars$speed, cars$dist), col="firebrick")
+
+```
+
+
+```{r}
+#This is for a spesific % exampe uses 20% weight
+plot(cars, main = "LOESS with span = 0.2")
+lines(lowess(cars, f = 0.2), col = "blue", lwd = 2)
+```
+
+
+
+## Logistic Regression
+```{r}
+#This is setting up the data
+ts <- TitanicSurvival
+ts$survived_num <- ifelse(ts$survived == "yes", 1, 0)#make survival binary
+ts$sex_num <- ifelse(ts$sex == "male", 1, 0)#make gender binary (don't read into that;)
+
+mySurvivGlm <- glm(survived_num ~ age:sex, data=ts)
+
+#females survive more
+
+#closest I can get to the graph:
+# Load the data
+library(carData)
+data("TitanicSurvival")
+
+# Clean the data
+ts <- na.omit(TitanicSurvival)
+ts$survived_num <- ifelse(ts$survived == "yes", 1, 0)
+
+# Fit separate logistic models for males and females
+model_male <- glm(survived_num ~ age, data = ts[ts$sex == "male", ], family = binomial)
+model_female <- glm(survived_num ~ age, data = ts[ts$sex == "female", ], family = binomial)
+
+# Create a sequence of ages
+age_seq <- seq(0, 80, by = 1)
+
+# Predict survival probabilities
+pred_male <- predict(model_male, newdata = data.frame(age = age_seq), type = "response")
+pred_female <- predict(model_female, newdata = data.frame(age = age_seq), type = "response")
+
+# Plot the raw data
+plot(ts$age, ts$survived_num, main = "TitanicSurvival data set",
+     xlab = "age", ylab = 'survived == "yes"', pch = 1)
+
+# Add prediction lines
+lines(age_seq, pred_female, col = "black")
+lines(age_seq, pred_male, col = "orange")
+
+# Add legend
+legend("top", legend = c("Female", "Male"), col = c("black", "orange"), lty = 1, title = "Gender")
+
+```
+
+
+## Robust Regression
+```{r}
+#reduces the weight of influence outliers have on the data
+
+my_Robustlm <- rlm(hp~wt,data=mtcars)
+mylm <- lm(hp~wt,data=mtcars)
+
+plot(hp~wt, data=mtcars)
+abline(my_Robustlm, col="blue")
+abline(mylm, col="red")#gets pulled up more by the outliers...
+
+```
+
+
+
+## Calculating P values
+```{r}
+#hypothesis: 4.2
+
+mylm <- lm(dist~speed, data=cars)
+summary(mylm)
+t <- ((3.9324-4.2)/0.4155)
+
+pval<- pt(-abs(t),48)*2
+pval
+```
+
+
+## Quadratic model
+
+```{r}
+#estimates of the effect of month on temp
+mylm <- lm(Temp~Month+I(Month^2), data=airquality)
+summary(mylm)
+
+```
+
+
+## Predictions for a simple linear regression model
+
+```{r}
+myfeetlm <- lm(width ~ length, data = KidsFeet)
+
+foot_pred<- predict(myfeetlm, newdata = data.frame(length = 25), interval = "prediction", level = 0.95)
+
+foot_pred
+```
+
+
+## residual calculation
+
+```{r}
+mycarlm <- lm(dist~speed,data=cars)
+summary(mycarlm)
+
+plot(dist~speed, data=cars)
+abline(mycarlm)
+
+residuals <- resid(mycarlm)
+max_resid <- max(residuals)
+max_resid
+
+
+# Add predictions and residuals to the full dataset
+cars$predicted <- predict(model)
+cars$residual <- cars$dist - cars$predicted
+
+# Filter for speeds between 10 and 15 (inclusive)
+subset <- subset(cars, speed >= 10 & speed <= 15)
+
+# Get the maximum residual in this subset
+max_resid <- max(subset$residual)
+max_resid
+```
+
+
+## Two lines model
+```{r}
+
+
+TenMileRace$sex <- ifelse(TenMileRace$sex == "M", 1, 0)
+mytimelm <- lm(time~age + sex + age:sex, TenMileRace)
+summary(mytimelm)
+
+
+plot(time ~ age, data=TenMileRace, col=sex)
+b <- coef(mytimelm)
+  x2 = 0
+  curve(b[1] + b[2]*x + b[3]*x2 + b[4]*x*x2, add=TRUE)
+  x2 = 1
+  curve(b[1] + b[2]*x + b[3]*x2 + b[4]*x*x2, add=TRUE, col="red")
+  
+  
+```
+
+
+
+Two lines with the same slope
+```{r}
+mytimelm <- lm(time~age + sex, TenMileRace)
+summary(mytimelm)
+
+slope <- 16.493 #This is under the age estimate since we will flip sex on and off
+
+female_model <- lm(time ~ 1 + offset(16.493 * age), data = TenMileRace, subset = sex == 0)
+intercept_female <- coef(female_model)
+
+
+male_model <- lm(time ~ 1 + offset(16.493 * age), data = TenMileRace, subset = sex == 1)
+intercept_male <- coef(male_model)
+
+
+plot(time ~ age, data=TenMileRace, col=sex)
+abline(a = intercept_female, b = slope, col = "black")  # Female line
+abline(a = intercept_male, b = slope, col = "red")      # Male line
+
+#differences in time
+intercept_female <- coef(female_model)
+intercept_male <- coef(male_model)
+intercept_female - intercept_male
+
+
+```
+
+
+Two lines model with the airquality data set
+
+```{r}
+windlm <- lm(Ozone~Wind+Temp+Wind:Temp,data=airquality)
+summary(windlm)
+
+plot(Ozone~Wind,data=airquality)
+
+# Create prediction data for Temp = 70
+wind_vals <- seq(1, 20, length.out = 100)
+pred_data <- data.frame(Wind = wind_vals, Temp = 70)
+pred_data$Ozone <- predict(model, newdata = pred_data)
+
+lines(pred_data$Wind, pred_data$Ozone, col = "blue", lwd = 2)
+
+```
+
+
+## Transformations
+
+```{r}
+
+mycarlm <- lm(mpg ~ hp, data = mtcars)
+
+boxCox(mycarlm)
+
+mytranscar <- lm(log(mpg)~hp, data=mtcars)
+
+pred_val <- predict(mytranscar, data.frame(hp=350), interval = "predict")
+
+#need to get it back to normal use exp
+exp(pred_val)
+```
+
+
+## msic.
+```{r}
+# Fit linear model
+model <- lm(volume ~ cloudcover, data = RailTrail)
+summary(model)
+```
+
+
+

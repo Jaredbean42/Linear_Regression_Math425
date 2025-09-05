@@ -1,0 +1,295 @@
+---
+title: "Regression Battleship - Final Guess"
+author: "Jared Bean"
+output: 
+  html_document:
+    theme: cerulean
+    toc: true
+    toc_float: true
+    code_folding: hide
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r}
+# Load any libraries you need here:
+library(ggplot2)
+library(dplyr)
+# Read in the rbdata here:
+rbdata <- read.csv("C:/Users/Jared/OneDrive/Desktop/Math 425/Battle SHip/rbdata_freedom.csv", header=TRUE)
+```
+
+
+
+## The Model of your Guess
+
+<!-- Enter your guessed model in the math notation below. -->
+
+$$
+\begin{aligned}
+y = & \ \beta_0 + \beta_1 x_2 + \beta_2 x_4 + \beta_3 x_{10} +
+\beta_4 x_5 + \beta_5 (x_2 x_4) + \beta_6 (x_2^2 x_4) \\
+    & + \beta_7 (x_2^3 x_4) + \beta_8 (x_6 x_4) + \beta_9 (x_2
+x_{10}) + \beta_{10} (x_{10} x_5) + \beta_{11} (x_4 x_5) + \epsilon
+\end{aligned}
+$$
+
+
+## The lm(...) of your Guess
+```{r}
+## Input your lm(Y ~ ... ,data=rbdata)
+final.lm <- lm(y ~ x2 + x4 + x10 + x5 + x2:x4 + I(x2^2):x4 + I(x2^3):x4 + x6:x4 +
+                 x2:x10 + x10:x5 + x4:x5, data = rbdata)
+```
+
+```{r, comment=NA}
+################################################################
+#Don't edit this part:
+  summary(final.lm)
+#and please don't pander it for this particular assignment.
+```
+
+
+## The Plot of your Guess
+
+```{r}
+# Plot your guess at the model here:
+# Remember, your guess only counts for credit if you correctly plot it in a single 2D scatterplot.
+
+# Please show these three things in your plot:
+# ## the data properly colored
+# ## the "fitted values" from your final.lm$fit with colors matching the data colors
+# ## your manually drawn curves of your regression model going through all fitted value points
+
+
+
+plot(y ~ x2, col = c("blue", "red")[as.numeric(interaction(x4))], data = rbdata)
+
+
+b <- coef(final.lm)
+
+
+drawit <- function(x4=0, x5=0, x6=0, x10=0, i=1){
+curve(b[1] + b[2]*x2 + b[3]*x4 + b[4]*x10 + b[5]*x5 + b[6]*x2*x4 +
+        b[7]*x4*I(x2^2) + b[8]*x4*I(x2^3) + b[9]*x4*x6 + b[10]*x2*x10 +
+        b[11]*x4*x5
+
+      , add=TRUE, xname="x2", col=palette()[i])
+}
+
+#stripes
+drawit(1,0,3,0,2)
+drawit(1,0,2,0,2)
+drawit(1,0,1,0,2)
+drawit(1,0,0,0,2)
+drawit(1,0,-1,0,2)
+drawit(1,0,-2,0,2)
+drawit(1,0,-3,0,2)
+
+#stars
+drawit(0,10,0,0,4)
+drawit(0,9,0,0,4)
+drawit(0,8,0,0,4)
+drawit(0,7,0,0,4)
+drawit(0,6,0,0,4)
+drawit(0,5,0,0,4)
+drawit(0,4,0,0,4)
+drawit(0,3,0,0,4)
+drawit(0,2,0,0,4)
+drawit(0,1,0,0,4)
+drawit(0,0,0,0,4)
+
+drawit(0,10,0,1,4)
+drawit(0,9,0,1,4)
+drawit(0,8,0,1,4)
+drawit(0,7,0,1,4)
+drawit(0,6,0,1,4)
+drawit(0,5,0,1,4)
+drawit(0,4,0,1,4)
+drawit(0,3,0,1,4)
+drawit(0,2,0,1,4)
+drawit(0,1,0,1,4)
+drawit(0,0,0,1,4)
+```
+
+
+## Searching for the Model
+
+<!-- Put all your scratch work down here. -->
+```{r}
+pairs(rbdata, panel = panel.smooth)
+
+pairs(rbdata, panel = panel.smooth, col=as.factor(rbdata$x4))
+
+```
+
+## focusing in on x2 seperating the cubic functions
+```{r}
+lm1 <- lm(y~x2,data=rbdata)
+
+ggplot(rbdata, aes(x=x2, y=y, color=as.factor(x4))) + 
+  geom_point()+
+  #geom_line(aes(y = lm1$fit), cex = 0.5) + 
+  facet_wrap(~as.factor(x4))
+```
+
+
+```{r}
+lm4 <- lm(y ~ I(x2)^2:x4 + I(x2)^2:x6, data=rbdata)
+
+
+ggplot(rbdata, aes(x=x2, y=y, color=as.factor(x4))) + 
+  geom_point()+
+  geom_line(aes(y = lm4$fit), cex = 0.5) + 
+  facet_wrap(~as.factor(x4 + x6))
+```
+
+```{r}
+lm4 <- lm(y ~ (x2 + I(x2^2) + I(x2^3))*x6*x4
+          , data=rbdata)
+
+#Change x6 values to isolate them further
+ggplot(rbdata, aes(x=x2, y=y, color=as.factor(x4))) + 
+  geom_point()+
+  geom_line(aes(y = lm4$fit), cex = 0.5) + 
+  facet_wrap(~as.factor(x6))
+```
+
+Add it into the model
+```{r}
+
+#When x4 is on x10 is 0
+rbdata_filtered <- rbdata %>%
+  filter(x4 == 1)
+
+
+lm5 <- lm(y ~ (x2 + I(x2^2) + I(x2^3) + x6)*x4 #stripes :)
+          , data=rbdata_filtered)
+summary(lm5)
+```
+
+## Now Stars
+
+```{r}
+#give us only stars
+rbdata_filtered <- rbdata %>%
+  filter(x4 == 0)
+
+
+lm1 <- lm(y ~ x2 + x2:x5 , data = rbdata_filtered)
+
+
+ggplot(rbdata_filtered, aes(x=x2, y=y, color=as.factor(x5))) + 
+  geom_point()+
+  geom_line(aes(y = lm1$fit), cex = 0.5) + 
+  facet_wrap(~as.factor(x5))
+```
+
+
+
+```{r}
+#x1,x3,x4,x10
+
+#change this to find new lines
+lm1 <- lm(y ~ x2 + x2:x10, data = rbdata_filtered)
+
+ggplot(rbdata_filtered, aes(x=x2, y=y, color=as.factor(x5))) + 
+  geom_point()+
+  geom_line(aes(y = lm1$fit), cex = 0.5) + 
+  facet_wrap(~as.factor(x5==4))
+```
+
+
+Just focus on one
+```{r}
+rbdata_f2 <- rbdata_filtered %>%
+  filter(x5 == 4)
+
+
+lm1 <- lm(y ~ x2 + x10 + x2*x10, data = rbdata_f2)
+summary(lm1)
+
+ggplot(rbdata_f2, aes(x=x2, y=y, color=as.factor(x10))) + 
+  geom_point()+
+  geom_line(aes(y = lm1$fit), cex = 0.5) 
+
+```
+
+
+```{r}
+lm1 <- lm(y ~ (x2 + x10 + x2*x10)*x5, data = rbdata_filtered)
+#summary(lm1)
+
+#Drop insignifant terms...
+lm1 <- lm(y ~ x2 + x10 + x5 + x2:x10 + x10:x5, data = rbdata_filtered)
+summary(lm1)
+
+
+ggplot(rbdata_filtered, aes(x=x2, y=y, color=as.factor(x5))) + 
+  geom_point()+
+  geom_line(aes(y = lm1$fit), cex = 0.5) + 
+  facet_wrap(~as.factor(x5==4))
+```
+
+fit it back to the data
+```{r}
+lm1 <- lm(y ~ (x2 + x10 + x5 + x2:x10 + x10:x5)*x4
+          , data = rbdata)
+
+ggplot(rbdata, aes(x=x2, y=y, color=as.factor(x4)))+
+  geom_point()+
+  geom_line(aes(y=lm1$fit), cex = 0.5)
+```
+
+
+## Preping final guess
+
+stars
+
+```{r}
+#stars
+lm1 <- lm(y ~ (x2 + x10 + x5 + x2:x10 + x10:x5)*x4
+          , data = rbdata)
+
+#summary(lm1)
+ggplot(rbdata, aes(x=x2, y=y, color=as.factor(x4)))+
+  geom_point()+
+  geom_line(aes(y=lm1$fit), cex = 0.5)
+```
+
+
+stripes
+
+```{r}
+#Stripes
+lm5 <- lm(y ~ (x2 + I(x2^2) + I(x2^3) + x6)*x4 #stripes :)
+          , data=rbdata)
+#summary(lm5)
+ggplot(rbdata, aes(x=x2, y=y, color=as.factor(x4)))+
+  geom_point()+
+  geom_line(aes(y=lm5$fit), cex = 0.5)
+```
+
+
+
+
+both
+```{r}
+final <- lm(y ~ (x2 + I(x2^2) + I(x2^3))*x4 + (x6:x4) + #stripes
+             (x2 + x10 + x5 + x2:x10 + x10:x5)*x4 #stars
+             , data = rbdata)
+summary(final)
+
+#got some insignificant stuff...
+final <- lm(y ~ x2 + x4 + x10 + x5 + x2:x4 + I(x2^2):x4 + I(x2^3):x4 + x6:x4 +
+                 x2:x10 + x10:x5 + x4:x5, data = rbdata)
+summary(final)
+```
+
+```{r}
+ggplot(rbdata, aes(x=x2, y=y, color=as.factor(x4)))+
+  geom_point()+
+  geom_line(aes(y=final$fit), cex = 0.5)
+```
+
+

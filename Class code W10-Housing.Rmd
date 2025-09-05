@@ -1,0 +1,192 @@
+---
+title: "House Selling Prices"
+output: 
+  html_document:
+    theme: cerulean
+    code_folding: hide
+editor_options: 
+  chunk_output_type: console
+---
+
+
+```{r}
+library(tidyverse)
+
+train <- read.csv("C:/Users/Jared/OneDrive/Desktop/Math 425/house-prices-advanced-regression-techniques-1/train.csv", stringsAsFactors = TRUE)
+
+train <- train %>%
+  mutate(Alley = as.character(Alley),
+         Alley = replace_na(Alley, "None"),
+         Alley = as.factor(Alley)) %>%
+  mutate(TotalSF = X1stFlrSF + X2ndFlrSF + TotalBsmtSF,
+                RichNbrhd = case_when(Neighborhood %in% c("StoneBr", "NridgHt", "NoRidge") ~ 1,
+                             TRUE ~ 0))
+
+
+plot(SalePrice ~ Neighborhood, data=train, las=2)
+
+lm1 <- lm(SalePrice ~ Neighborhood, data=train)
+summary(lm1)
+
+
+lm.1stflr <- lm(SalePrice ~ X1stFlrSF, data=train)
+summary(lm.1stflr)
+plot(SalePrice ~ X1stFlrSF, data=train)
+
+lm.alley <- lm(SalePrice ~ Alley, data=train)
+summary(lm.alley)
+plot(SalePrice ~ Alley, data=train)
+table(train$Alley)
+View(train[,c("SalePrice","Alley")])
+
+lm.fence <- lm(SalePrice ~ Fence, data=train)
+summary(lm.fence)
+
+apply(train, 2, function(x) sum(is.na(x))) #count missing values
+
+
+
+
+lm.1stflr <- lm(SalePrice ~ X1stFlrSF, data=train)
+summary(lm.1stflr)
+
+lm.2ndflr <- lm(SalePrice ~ X2ndFlrSF, data=train)
+summary(lm.2ndflr)
+
+lm.basement <- lm(SalePrice ~ TotalBsmtSF, data=train)
+summary(lm.basement)
+
+#Put them all together into a high dimensional multiple regression model
+
+lm.sqft.all <- lm(SalePrice ~ X1stFlrSF + X2ndFlrSF + TotalBsmtSF, data=train)
+summary(lm.sqft.all)
+
+#Or use mutate and create a new "TotalSF" variable that allows for a simple linear regression model that is just as powerful, but far easier to graph and interpret.
+
+train <- train %>%
+  mutate(TotalSF = X1stFlrSF + X2ndFlrSF + TotalBsmtSF)
+
+lm.sqft <- lm(SalePrice ~ TotalSF, data=train)
+summary(lm.sqft)
+plot(SalePrice ~ TotalSF, data=train)
+
+
+
+
+
+lm.sqft.rich <- lm(SalePrice ~ TotalSF + RichNbrhd + TotalSF:RichNbrhd, data=train)
+summary(lm.sqft.rich)
+
+lm.sqft.rich.log <- lm(log(SalePrice) ~ TotalSF + RichNbrhd + TotalSF:RichNbrhd, data=train)
+summary(lm.sqft.rich)
+
+exp(coef(lm.sqft.rich.log))
+#are the multipliers for the increase in average Sale Price.
+# So 1.000337 means each square foot makes the predicted value 1.000337 times as large. Or, 1,000 square feet of addition makes the home 40% greater in value.
+
+exp(coef(lm.sqft.rich.log)[2]*1000)
+```
+
+```{r}
+house3d <- lm(SalePrice ~ TotalSF + LotArea + TotalSF:LotArea, data=train)
+summary(house3d)
+
+## For houses with a lot area of 1300 sf, each additional sf of the house (TotalSF) adds b[2]+b[4]*1300
+## or $91 to the predicted value of the home.
+
+## For houses with a lot area of 215425 sf, each additional sf of the house (TotalSF) drops the predicted value by $181.74, b[2]+b[4]*215425
+
+## To embed the 3d-scatterplot inside of your html document is harder.
+library(plotly)
+library(reshape2)
+
+
+
+#Setup Axis
+axis_x <- seq(min(train$TotalSF), max(train$TotalSF), length.out=100)
+axis_y <- seq(min(train$LotArea), max(train$LotArea), length.out=100)
+
+#Sample points
+air_surface <- expand.grid(TotalSF = axis_x, LotArea = axis_y, KEEP.OUT.ATTRS=F)
+air_surface$Z <- predict.lm(house3d, newdata = air_surface)
+air_surface <- acast(air_surface, LotArea ~ TotalSF, value.var = "Z") #y ~ x
+
+#Create scatterplot
+plot_ly(train, 
+        x = ~TotalSF, 
+        y = ~LotArea, 
+        z = ~SalePrice,
+        type = "scatter3d", 
+        mode = "markers") %>%
+  add_trace(z = air_surface,
+            x = axis_x,
+            y = axis_y,
+            type = "surface")
+plot(SalePrice ~ TotalSF, data=train, ylim=c(-1000000,1000000))
+
+b <- coef(house3d)
+b
+
+drawit <- function(LotArea, col=col){
+  curve(b[1] + b[2]*TotalSF + b[3]*LotArea + b[4]*TotalSF*LotArea, add=TRUE, col=col, xname="TotalSF")
+}
+
+for (la in axis_y){
+  drawit(la, col="red")
+}
+drawit(1300, col="red")
+drawit(215245, col="blue")
+
+
+
+househd <- lm(SalePrice ~ TotalSF + LotArea + GarageArea + Alley + FullBath + ScreenPorch, data=train)
+summary(househd)
+
+
+
+```
+
+
+
+```{r}
+set.seed(121)
+
+num_rows <- 1000 #1460 total
+keep <- sample(1:nrow(train), num_rows)
+
+mytrain <- train[keep, ] #Use this in the lm(..., data=mytrain) it is like "rbdata"
+
+mytest <- train[-keep, ] #Use this in the predict(..., newdata=mytest) it is like "rbdata2"
+
+
+househd <- lm(SalePrice ~ TotalSF + LotArea + GarageArea + Alley + FullBath + ScreenPorch, data=mytrain)
+summary(househd)
+
+house3d <- lm(SalePrice ~ TotalSF + LotArea + TotalSF:LotArea, data=mytrain)
+
+yh_hd <- predict(househd, newdata=mytest)
+yh_3d <- predict(house3d, newdata=mytest)
+
+ybar <- mean(mytest$SalePrice)
+
+SSTO <- sum( (mytest$SalePrice - ybar)^2 )
+
+SSE_hd <- sum( (mytest$SalePrice - yh_hd)^2 )
+SSE_3d <- sum( (mytest$SalePrice - yh_3d)^2 ) 
+
+rs_hd <- 1 - SSE_hd/SSTO
+rs_3d <- 1 - SSE_3d/SSTO
+
+n <- nrow(mytest)
+p_3d <- length(house3d)
+p_hd <- length(househd)
+
+rsa_hd <- 1 - (n-1)/(n-p_hd)*SSE_hd/SSTO
+rsa_3d <- 1 - (n-1)/(n-p_3d)*SSE_3d/SSTO
+
+rsa_hd
+summary(househd)
+rsa_3d
+summary(house3d)
+
+```

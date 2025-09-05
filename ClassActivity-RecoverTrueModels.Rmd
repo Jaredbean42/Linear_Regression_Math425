@@ -1,0 +1,161 @@
+---
+title: "Recovering a True Model"
+output: 
+  html_document:
+    theme: cerulean
+    code_folding: hide
+editor_options: 
+  chunk_output_type: inline
+---
+
+```{r, message=FALSE, warning=FALSE}
+rbdata_beg <- read.csv("rbdata_beginner-1.csv", header=TRUE, stringsAsFactors = TRUE)
+#try intrm. do it for battles
+rbdata_int <- read.csv("rbdata_intermediate.csv", header=TRUE, stringsAsFactors = TRUE)
+rbdata_adv <- read.csv("rbdata_advanced.csv", header=TRUE, stringsAsFactors = TRUE)
+```
+
+## Part 1 - Recovering a True Model (Beginner Level)
+
+We believe the true model to be...
+
+$$
+  Y_i = \underbrace{\beta_0+ \beta_1X_{5i}}_\text{The True Model} + \epsilon_i
+$$
+
+And estimate that model by...
+
+$$
+  \hat{Y}_i = ...
+$$
+
+with our estimate of $\sigma$ as ...
+
+```{r}
+pairs(rbdata_beg, panel=panel.smooth)
+pairs(rbdata_beg, panel=panel.smooth, col=as.factor(rbdata_beg$X3))
+
+#fast way to code 2 line
+mylm <- lm(Y~X3*X5, data=rbdata_beg)
+summary(mylm)
+
+#which have slope x5 x3
+#Your guess is the conf. range check this
+confint(mylm)
+
+```
+
+
+## Part 2 - Recovering a True Model (Advanced Level)
+
+We believe the true model to be...
+
+$$
+  Y_i = \underbrace{...}_\text{The True Model} + \epsilon_i
+$$
+
+And estimate that model by...
+
+$$
+  \hat{Y}_i = ...
+$$
+
+with our estimate of $\sigma$ as ...
+
+## change R chunck to read better
+```{r, fig.height=10,fig.width=10}
+pairs(rbdata_adv, panel=panel.smooth)
+
+
+# . grabs all of them
+lm1 <- lm(y~., data=rbdata_adv)
+summary(lm1)
+
+#look for some color
+#pairs(rbdata_adv, panel=panel.smooth, col=as.factor(rbdata_adv$x1))
+#Look at y x2
+pairs(rbdata_adv, panel=panel.smooth, col=as.factor(rbdata_adv$x4))
+# 
+# pairs(rbdata_adv, panel=panel.smooth, col=as.factor(rbdata_adv$x5))
+# pairs(rbdata_adv, panel=panel.smooth, col=as.factor(rbdata_adv$x6))
+# pairs(rbdata_adv, panel=panel.smooth, col=as.factor(rbdata_adv$x7))
+# pairs(rbdata_adv, panel=panel.smooth, col=as.factor(rbdata_adv$x8))
+# pairs(rbdata_adv, panel=panel.smooth, col=as.factor(rbdata_adv$x9))
+# pairs(rbdata_adv, panel=panel.smooth, col=as.factor(rbdata_adv$x10))
+
+
+
+
+
+```
+
+## plot it and stretch it
+```{r,fig.height=3, fig.width=10}
+# ggplot(rbdata_adv, aes(x=x2, y=y, color=as.factor(x4)))+
+#   geom_point()+
+#   geom_smooth()+
+#   facet_wrap(~as.factor(x4))
+# 
+# # just change the col slowly do x4 and x5 
+# ggplot(rbdata_adv, aes(x=x2, y=y, color=interaction(x4, x5)))+
+#   geom_point()+
+#   # auto loess
+#   geom_smooth()+
+#   facet_wrap(~as.factor(x4))
+
+# seperating things out more x6 doesn't do much try x8 
+#add x 10 creates more chaos
+ggplot(rbdata_adv, aes(x=x2, y=y, color=interaction(x4, x5, x8)))+
+  geom_point()+
+  # auto loess
+  geom_smooth()+
+  #somtimes just do x4 and x5 shows clear patterns then do x8
+  facet_wrap(~interaction(x4, x5, x8))
+```
+## start modeling
+```{r}
+
+#this is the quadratic
+mylm <- lm(y~x2+I(x2^2) +
+             
+             #the x4 switch looks like a line let it turn it off this is yellow
+             x4 + x4:x2 + x4:I(x2^2) +
+             
+             #line again?
+             x5 + x5:x2 + x5:I(x2^2) + 
+             
+             #Need the w for 4th degree blue
+             x8 + x8:x2 + x8:I(x2^2) + x8:I(x2^3) + x8:I(x2^4) +
+             
+             #now purple
+             x4:x8 + x4:x8:x2 + x4:x8:I(x2^2) + x4:x8:I(x2^3) + x4:x8:I(x2^4)
+             
+             ,data=rbdata_adv
+             
+           )
+
+summary(mylm)
+
+```
+
+
+
+## Part 3 - Recovering a True Model (Advanced Level)
+
+We believe the true model to be...
+
+$$
+  Y_i = \underbrace{...}_\text{The True Model} + \epsilon_i
+$$
+
+And estimate that model by...
+
+$$
+  \hat{Y}_i = ...
+$$
+
+with our estimate of $\sigma$ as ...
+
+```{r}
+
+```
